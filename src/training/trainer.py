@@ -30,6 +30,17 @@ class TrainStats:
     elapsed_sec: float
 
 
+def _resolve_device(device: str) -> str:
+    """Resolve 'auto' to the best available backend: cuda → mps → cpu."""
+    if device != "auto":
+        return device
+    if torch.cuda.is_available():
+        return "cuda"
+    if torch.backends.mps.is_available():
+        return "mps"
+    return "cpu"
+
+
 class Trainer:
     def __init__(
         self,
@@ -40,6 +51,7 @@ class Trainer:
         log_dir: Optional[Path] = None,
         checkpoint_dir: Optional[Path] = None,
     ):
+        device = _resolve_device(device)
         self.model = model.to(device)
         self.loss = loss.to(device)
         self.optim = optimizer

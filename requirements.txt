@@ -1,1 +1,18 @@
-python-dotenv
+# CausalStock reproduction — Python 3.10
+#
+# Core (training):
+torch==2.11.0
+numpy==2.2.6
+pandas==2.3.3
+scikit-learn==1.7.2
+networkx==3.4.2
+pyarrow==24.0.0
+PyYAML==6.0.3
+tqdm==4.67.3
+
+# DNE GPT scoring (Phase 3b):
+openai==2.36.0
+python-dotenv==1.2.2
+
+# Tests:
+pytest==9.0.3

@@ -14,7 +14,9 @@ data:
   test_start:  "2015-10-01"
   test_end:    "2016-01-01"
   lag_L: 5             # paper Appendix C.4
-  news_per_day: 10     # l = 10
+  news_per_day: 10     # l = 10, model-facing (paper Appendix C.4)
+  score_news_per_day: 20  # what we scored & cached per (stock, date) per paper authors' script
+  dne_cache_path: data/processed/dne_acl18.parquet  # set by score_news.py
   price_dim: 7         # ACL18 raw price dim
   use_news: true       # ablation flag (w/o news)
   movement_threshold: 0.0  # rise=1 iff close_t > close_{t-1}
@@ -43,7 +45,8 @@ train:
   seed: 0
 
 runtime:
-  device: cpu          # CPU first per CLAUDE.md
+  device: auto         # auto = cuda > mps > cpu. Explicit values also OK.
+                       # School PC w/ RTX A6000 → "cuda"; M1/M2 mac → "mps".
   num_workers: 0
   checkpoint_dir: experiments/checkpoints/acl18
   log_dir: experiments/logs/acl18

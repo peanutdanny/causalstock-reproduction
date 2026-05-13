@@ -79,6 +79,17 @@ def build_acl18_splits(
 
     tweets = load_stocknet_tweets(tweet_root, stocks, all_needed_dates) if news_scorer else {}
 
+    # Compute z-score normalization from the train range only, then share with
+    # val/test (docs/reproduction-questions.md A.1).
+    if train_dates:
+        train_lo = pd.Timestamp(train_range[0])
+        train_hi = pd.Timestamp(train_range[1])
+        feature_mean, feature_std = CausalStockDataset.compute_feature_stats(
+            prices, date_range=(train_lo, train_hi)
+        )
+    else:
+        feature_mean = feature_std = None
+
     def _make(dates):
         return CausalStockDataset(
             price_dfs=prices,
@@ -89,6 +100,8 @@ def build_acl18_splits(
             news_per_day=news_per_day,
             news_scorer=news_scorer,
             movement_threshold=movement_threshold,
+            feature_mean=feature_mean,
+            feature_std=feature_std,
         )
 
     return _make(train_dates), _make(valid_dates), _make(test_dates)

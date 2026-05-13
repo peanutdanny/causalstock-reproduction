@@ -366,6 +366,13 @@ Eq. 4의 정규화 상수 Z는 λ_s, λ_d 고정 시 G에 무관 → ELBO gradie
 ### I.5 🟢 ψ(C̄_{T-l}^j)의 l-news reduction
 `C_{T-l}^j ∈ R^{l × d_m}`을 단일 vector로 줄이는 방식 미명시. 본 구현은 **mean-pool** 사용 (B.4 default와 일치). attention-pool sweep은 미달 시.
 
+### I.6 🟡 DNE LLM 변경 (paper deviation, 2026-05-13)
+Paper는 `gpt-3.5-turbo` 사용. 본 구현은 비용·속도·품질 모두 우월한 **`gpt-5.4-mini`** 사용 (2026년 기준 표준 model). Paper Table 2c가 "더 좋은 LLM → 약간 더 좋은 ACC"를 보였으므로, 결과는 paper 63.42에서 +0~+1%p 정도 차이 예상.
+
+**Why**: gpt-3.5-turbo Tier 1 한도(60K TPM)로 ACL18 전체 점수화에 ~16시간 소요. gpt-5.4-mini는 더 빠르고 저렴.
+
+**How to apply**: paper 정확 매칭이 필요한 비교는 별도 `dne_acl18_gpt35.parquet` 캐시로 추가 실험 가능.
+
 ---
 
 ## 우선 해결해야 할 Top-5

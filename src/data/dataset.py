@@ -38,7 +38,13 @@ class CausalStockSample:
 
 
 class CausalStockDataset(Dataset):
-    """Lazy index over valid target dates."""
+    """Lazy index over valid target dates.
+
+    `feature_mean` / `feature_std`: optional per-feature normalization arrays
+    of shape (F,). If provided, features are z-scored as (x - mean) / std.
+    Computed from the train split and shared across train/val/test
+    (docs/reproduction-questions.md A.1 default — z-score normalization).
+    """
 
     def __init__(
         self,
@@ -50,6 +56,8 @@ class CausalStockDataset(Dataset):
         news_per_day: int = 10,
         news_scorer: Optional[NewsScorer] = None,
         movement_threshold: float = 0.0,
+        feature_mean: Optional[np.ndarray] = None,
+        feature_std: Optional[np.ndarray] = None,
     ):
         self.stocks = tuple(stocks)
         self.D = len(stocks)
@@ -63,10 +71,20 @@ class CausalStockDataset(Dataset):
             s: {d: i for i, d in enumerate(df["date"].tolist())}
             for s, df in price_dfs.items()
         }
-        self._features = {
+        raw_features = {
             s: df[PRICE_FEATURE_COLUMNS].to_numpy(dtype=np.float32)
             for s, df in price_dfs.items()
         }
+        if feature_mean is not None and feature_std is not None:
+            std = np.where(feature_std > 1e-8, feature_std, 1.0).astype(np.float32)
+            self._features = {
+                s: (arr - feature_mean.astype(np.float32)) / std
+                for s, arr in raw_features.items()
+            }
+        else:
+            self._features = raw_features
+        self.feature_mean = feature_mean
+        self.feature_std = feature_std
         self._close = {s: df["close"].to_numpy(dtype=np.float32) for s, df in price_dfs.items()}
         self._common_dates = sorted(
             set.intersection(*[set(df["date"].tolist()) for df in price_dfs.values()])
@@ -74,6 +92,22 @@ class CausalStockDataset(Dataset):
         common = set(self._common_dates)
         self.samples = [d for d in target_dates if d in common]
         self._date_to_idx = {d: i for i, d in enumerate(self._common_dates)}
+
+    @staticmethod
+    def compute_feature_stats(
+        price_dfs: Dict[str, pd.DataFrame],
+        date_range: Optional[Tuple[pd.Timestamp, pd.Timestamp]] = None,
+    ) -> Tuple[np.ndarray, np.ndarray]:
+        """Pool features across stocks (and date_range, if given) → (mean, std) of shape (F,)."""
+        arrs = []
+        for df in price_dfs.values():
+            sub = df
+            if date_range is not None:
+                lo, hi = date_range
+                sub = df[(df["date"] >= lo) & (df["date"] <= hi)]
+            arrs.append(sub[PRICE_FEATURE_COLUMNS].to_numpy(dtype=np.float32))
+        pooled = np.concatenate(arrs, axis=0)
+        return pooled.mean(axis=0), pooled.std(axis=0)
 
     @property
     def F(self) -> int:
@@ -105,8 +139,10 @@ class CausalStockDataset(Dataset):
                 if self.scorer is not None:
                     ds = d.strftime("%Y-%m-%d")
                     raw = self.tweets.get((s, ds), [])
-                    scores = self.scorer(s, ds, raw)  # (l, 5)
-                    C[i, j] = scores
+                    scores = self.scorer(s, ds, raw)  # (l_score, 5), l_score ≥ self.l
+                    # Paper scores 20 / day but model uses l=10. Slice the
+                    # first self.l in time order (Appendix C.4).
+                    C[i, j] = scores[: self.l]
             row_T = rows.get(T)
             row_T_minus_1 = rows.get(window_dates[-1])
             if row_T is not None and row_T_minus_1 is not None:

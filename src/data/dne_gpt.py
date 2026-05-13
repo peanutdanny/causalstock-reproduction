@@ -64,7 +64,14 @@ def parse_scores(text: str) -> Optional[np.ndarray]:
 
 @dataclass
 class GPTConfig:
-    model: str = "gpt-3.5-turbo-0125"
+    """GPT scoring config.
+
+    Default model is gpt-5.4-mini (cheaper, faster, slightly better than
+    gpt-3.5-turbo). The paper used gpt-3.5-turbo; switching to a newer
+    model is a documented deviation (docs/reproduction-questions.md I.6).
+    """
+
+    model: str = "gpt-5.4-mini"
     temperature: float = 0.0
     max_retries: int = 3
     timeout_sec: int = 30

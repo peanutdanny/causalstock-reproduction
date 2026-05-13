@@ -1,0 +1,46 @@
+[
+  {
+    "label": "price_only_lr1e-3_bern",
+    "lr": 0.001,
+    "form": "bernoulli",
+    "use_news": false,
+    "best_epoch": 20,
+    "best_val_acc": 0.7145658263305322,
+    "test_acc": 0.7194852941176471,
+    "test_mcc": 0.4381028052233599,
+    "wall_clock_sec": 99.03316712379456
+  },
+  {
+    "label": "price_only_lr1e-4_bern",
+    "lr": 0.0001,
+    "form": "bernoulli",
+    "use_news": false,
+    "best_epoch": 28,
+    "best_val_acc": 0.6378151260504201,
+    "test_acc": 0.6356617647058823,
+    "test_mcc": 0.2698925490505167,
+    "wall_clock_sec": 103.4425458908081
+  },
+  {
+    "label": "price_only_lr1e-5_gauss",
+    "lr": 1e-05,
+    "form": "gaussian",
+    "use_news": false,
+    "best_epoch": 30,
+    "best_val_acc": 0.5619047619047619,
+    "test_acc": 0.560110294117647,
+    "test_mcc": 0.12288965571762558,
+    "wall_clock_sec": 101.7888560295105
+  },
+  {
+    "label": "full_lr1e-3_bern",
+    "lr": 0.001,
+    "form": "bernoulli",
+    "use_news": true,
+    "best_epoch": 20,
+    "best_val_acc": 0.7075630252100841,
+    "test_acc": 0.7167279411764705,
+    "test_mcc": 0.4321036469000172,
+    "wall_clock_sec": 134.65509700775146
+  }
+]

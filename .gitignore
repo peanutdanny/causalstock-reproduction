@@ -12,6 +12,8 @@ data/processed/*.pt
 *.csv
 *.parquet
 !data/processed/sample_*.csv
+# DNE score caches (작아서 git에 포함)
+!data/processed/dne_*.parquet
 
 # Experiments
 experiments/checkpoints/

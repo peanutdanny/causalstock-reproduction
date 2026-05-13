@@ -5,8 +5,11 @@ close_raw, volume — i.e. 1 date column + 6 numeric features (paper-summary §3
 line 53; the "7-dim" label in §7.1 counts the date column).
 
 Tweet files: one JSON record per line under tweet/preprocessed/{TICKER}/{YYYY-MM-DD},
-each with a "text" field that is a *list of tokens*. We join tokens with spaces
-to recover an approximate raw string used by the DNE prompt.
+each with a "text" field that is a *list of tokens*. To match the paper's
+GPT-3.5 prompt (CausalStock_code/GPT_scoremaker/GPT_news_score.py line 294-297,
+which passes row['text'] — the python list — directly to `.format()`), we
+preserve the list and stringify it with `str(list)` so the prompt receives
+literal `"['$', 'aapl', '-', ...]"` text.
 """
 from __future__ import annotations
 
@@ -35,6 +38,13 @@ def load_stocknet_prices(price_root: str | Path) -> Dict[str, pd.DataFrame]:
 
 
 def _tweet_texts_for_file(path: Path) -> List[str]:
+    """Return one string per tweet in the file.
+
+    For paper-faithfulness, list-of-token entries are stringified as `str(list)`
+    (e.g. `"['$', 'aapl', '-', 'wall', ...]"`), matching the paper authors'
+    `prompt_template.format(news_content=row['text'])` where `row['text']` is
+    the python list.
+    """
     texts: List[str] = []
     with path.open("r") as f:
         for line in f:
@@ -44,7 +54,7 @@ def _tweet_texts_for_file(path: Path) -> List[str]:
             obj = json.loads(line)
             toks = obj.get("text") or []
             if isinstance(toks, list):
-                texts.append(" ".join(toks))
+                texts.append(str(toks))
             elif isinstance(toks, str):
                 texts.append(toks)
     return texts

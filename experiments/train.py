@@ -53,10 +53,20 @@ def main():
     if args.tiny:
         only = ["AAPL", "AMZN", "BA", "BAC", "C", "CMCSA", "CVX", "DIS"]
 
-    cache_path = ROOT / "data/processed/dne_mock_acl18.parquet"
-    cache = DNECache(cache_path, news_per_day=int(cfg.data.news_per_day))
-    base_scorer = MockDNEScorer(news_per_day=int(cfg.data.news_per_day))
-    scorer = CachedScorer(base_scorer, cache) if cfg.data.use_news else None
+    # DNE source: real GPT cache (preferred) or mock fallback. Score cache
+    # was produced at news_per_day=20 (paper-faithful); dataset slices to 10.
+    score_cache_path = getattr(cfg.data, "dne_cache_path", None)
+    score_news_per_day = int(getattr(cfg.data, "score_news_per_day", 20))
+    if score_cache_path and (ROOT / score_cache_path).exists():
+        cache = DNECache(ROOT / score_cache_path, news_per_day=score_news_per_day)
+        logger.info(f"using GPT DNE cache: {score_cache_path} ({len(cache)} entries)")
+        scorer = CachedScorer(MockDNEScorer(news_per_day=score_news_per_day), cache) if cfg.data.use_news else None
+    else:
+        cache_path = ROOT / "data/processed/dne_mock_acl18.parquet"
+        cache = DNECache(cache_path, news_per_day=int(cfg.data.news_per_day))
+        base_scorer = MockDNEScorer(news_per_day=int(cfg.data.news_per_day))
+        scorer = CachedScorer(base_scorer, cache) if cfg.data.use_news else None
+        logger.warning("no GPT cache configured — falling back to MockDNEScorer (noise)")
 
     train_ds, valid_ds, test_ds = build_acl18_splits(
         price_root=ROOT / cfg.data.price_root,
