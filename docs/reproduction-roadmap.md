@@ -186,11 +186,15 @@
 - **예상**: 30분.
 - **언제**: A1 마무리 후, 학교PC로 push 직전.
 
-#### A4. (선택) 노트북에서 minimal 학습 사전 검증
-- **위치**: 노트북 (~5분)
-- **차단**: 없음
-- **작업**: 현재 200건 캐시 + dataset 슬라이스(첫 200 pair만)로 train.py가 GPT cache를 실제로 로드하는지 1 epoch 학습. cache wiring 검증.
-- **이유**: 학교PC가서 wiring 깨져 mock fallback이 무성성으로 작동하는 사고 방지.
+#### A4. ✅ 노트북에서 minimal 학습 사전 검증 (완료 2026-05-13)
+- **위치**: 노트북 (5분)
+- **검증 명령**: `python -m experiments.train --config experiments/configs/acl18.yaml --max-epochs 1 --tiny --seed 0`
+- **결과**:
+  - ✅ train.py가 GPT cache 인식 — 로그 `using GPT DNE cache: data/processed/dne_acl18.parquet (200 entries)`
+  - ✅ 학습 정상 동작 (1 epoch 완료, 결과 JSON 저장)
+  - 🟡 Cache hit 비율 **4.7%** (935/19,960) — 200건이 AAPL 2013-12-16~2014-10-01만 cover
+  - 나머지 95.3%는 mock score로 fallback (의도된 동작)
+- **결론**: wiring 100% 정상. GPT 영향력 측정은 C1 완료 후 (~100% cache hit) 다시 검증 필요.
 
 ### B. 학교PC에서 — 셋업 (1회)
 
@@ -270,6 +274,7 @@
 | Tiny smoke 1 epoch | trainer 1 epoch + checkpoint | 무에러 + 체크포인트 저장 | ✅ |
 | Full 85 stocks × 30 epoch | 4가지 setting 비교 | finite, paper-exact ≈ 0.56 | ✅ |
 | GPT 200건 점수 sanity | 범위/분포 | 범위 위반 0 | ✅ |
+| **GPT cache → train.py wiring** | tiny 1 epoch (A4) | 로그 `using GPT DNE cache (200 entries)` 출력 + 학습 완주 | ✅ (cache hit 4.7%, 나머지 mock fallback) |
 | Async client | fake client 단위 | 4 tests pass | ✅ |
 | 인터넷 끊김 처리 | 코드 로직 | 무한 wait + zero 안 캐싱 | ✅ (코드 검증, 실측 미실시) |
 | FCM sparsity (Eq. 9) | gradient mask | G=0 이면 ∂f/∂X=0 | ✅ |
@@ -288,7 +293,7 @@
 | **paper Figure 4 (SR/APV)** | A2-a + trained model | C2 |
 | `device='auto'` on CUDA | B1 첫 실행 | 학교PC |
 | `run_phase10.sh` 셸 실제 실행 | B1 직후 | 학교PC |
-| GPT cache → train.py wiring (real cache) | A4 (or C2-a) | 200건 이상 캐시 |
+| **GPT cache → train.py wiring (대규모 cache)** | C2-a 이후 cache hit ≈100% 인 상태로 재검증 | C1 완료 |
 | Phase 11 어댑터 (코드 미작성) | A1 + unit tests | A1 진행 |
 
 ### 5.3 🔁 매 변경 시 재실행할 검증
@@ -389,6 +394,7 @@ git pull
 | 날짜 | 변경 | by |
 |---|---|---|
 | 2026-05-13 | 초기 작성. Phase 0-9 ✅, Phase 9.5 ✅, Phase 3b 200건 ✅, GitHub push ✅. M0 달성. | Claude + djhwang |
+| 2026-05-13 | A4 ✅ GPT cache → train.py wiring 검증 완료. cache hit 4.7% (tiny config), wiring 정상. 대규모 cache 검증은 C1 완료 후. | Claude |
 
 ---
 
