@@ -1,0 +1,46 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.python-version
+
+# Data (대용량 파일 제외)
+data/raw/
+data/processed/*.pkl
+data/processed/*.pt
+*.csv
+*.parquet
+!data/processed/sample_*.csv
+
+# Experiments
+experiments/checkpoints/
+experiments/logs/
+*.pt
+*.pth
+*.ckpt
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Claude
+.claude/agent-memory/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Reference code (paper authors' release — contains leaked API keys, keep local only)
+CausalStock_code/
+
+# External datasets & reference papers (large, fetched separately)
+reference_data/
+paper/
+
+# Secrets
+.env
+*.key

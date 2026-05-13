@@ -1,0 +1,49 @@
+# Ablation: CausalStock w/o TCD (paper Table 2 target ≈ 51% ACC on ACL18).
+# G fixed to ones (every edge always active), σ ≡ 0.5, no causal discovery.
+
+experiment_name: causalstock_acl18_no_tcd
+
+data:
+  dataset: acl18
+  price_root: reference_data/stocknet-dataset-master/price/preprocessed
+  tweet_root: reference_data/stocknet-dataset-master/tweet/preprocessed
+  train_start: "2014-01-02"
+  train_end:   "2015-08-02"
+  valid_start: "2015-08-03"
+  valid_end:   "2015-09-30"
+  test_start:  "2015-10-01"
+  test_end:    "2016-01-01"
+  lag_L: 5
+  news_per_day: 10
+  price_dim: 7
+  use_news: true
+  movement_threshold: 0.0
+
+model:
+  d_p: 4
+  d_m: 64
+  hidden_size: 332
+  use_tcd: false             # ← ablation flag
+  lag_dep: true
+  h_uv_layers: 1
+  gumbel_tau: 1.0
+  graph_prior_lambda_s: 1.0
+  graph_prior_lambda_d: 0.0
+
+loss:
+  bce_weight: 0.01
+  noise_init: 0.0
+
+train:
+  optimizer: adam
+  lr: 1.0e-5
+  batch_size: 32
+  max_epochs: 100
+  early_stop_patience: 10
+  seed: 0
+
+runtime:
+  device: cpu
+  num_workers: 0
+  checkpoint_dir: experiments/checkpoints/acl18_no_tcd
+  log_dir: experiments/logs/acl18_no_tcd
