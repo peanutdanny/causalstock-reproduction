@@ -55,16 +55,32 @@ On the new machine:
 tar xzf reference_data.tar.gz   # unpacks to ./reference_data/
 ```
 
-### Option B — fetch each upstream
+### Option B — fetch each upstream (recommended for fresh school PC)
 
 ```bash
 mkdir -p reference_data && cd reference_data
+
+# ACL18 (Phase 10 prerequisite, ACL18 only needs this one)
 git clone https://github.com/yumoxu/stocknet-dataset.git stocknet-dataset-master
+
+# Phase 11 datasets (needed only when you start Phase 11)
 git clone https://github.com/fulifeng/Adv-ALSTM.git Adv-ALSTM-master
 git clone https://github.com/BigRoddy/CMIN-Dataset.git CMIN-Dataset-main
-# NI225/FTSE100/CSI300 (DTML data): download from https://datalab.snu.ac.kr/dtml
-# and unpack into reference_data/snu\ data/
+
+# NI225/FTSE100/CSI300 (DTML data, Phase 11):
+# Download from https://datalab.snu.ac.kr/dtml manually and unpack to
+# reference_data/snu\ data/ ‐ they are not on GitHub.
+
 cd ..
+```
+
+Sanity check after clone:
+
+```bash
+ls reference_data/stocknet-dataset-master/price/preprocessed | wc -l
+# Expected: 88
+ls reference_data/stocknet-dataset-master/tweet/preprocessed | wc -l
+# Expected: 87
 ```
 
 After either option, check:
@@ -74,20 +90,19 @@ ls reference_data/stocknet-dataset-master/price/preprocessed | wc -l
 # Should print 88 (ACL18 price files)
 ```
 
-## 5) Bring the DNE score cache (optional but saves money & time)
+## 5) DNE score cache
 
-If you've already paid for GPT scoring on the laptop, copy the parquet cache:
+The current repo includes a small DNE cache (200 AAPL pairs scored with
+gpt-5.4-mini and gpt-3.5 backup) under `data/processed/`. After `git clone` it
+will already be there. To complete the rest of ACL18:
 
 ```bash
-# On laptop:
-scp data/processed/dne_acl18.parquet user@school-pc:~/causalstock-reproduction/data/processed/
-# (and dne_acl18_gpt35.parquet if you want the gpt-3.5 backup)
+bash scripts/run_scoring_overnight.sh
+# Resumes from the cached 200 pairs. Picks up everything else (~99K calls,
+# ~$10-15, 5-10h on Tier 1).
 ```
 
-Otherwise, you'll run scoring fresh on the new machine. That re-spends API
-money (~$10–15 for ACL18 with gpt-5.4-mini at 2026 prices).
-
-## 6) Smoke test the pipeline (CPU, ~30 sec)
+## 6) Smoke test the pipeline
 
 ```bash
 python -m experiments.train \
@@ -95,8 +110,22 @@ python -m experiments.train \
     --max-epochs 1 --tiny --seed 0
 ```
 
-Expect: `train=393 valid=42 test=64 D=8`, one epoch logged, checkpoint saved
-under `experiments/checkpoints/acl18/`.
+Expected output:
+```
+train=393 valid=42 test=64 D=8
+trainer: epoch=001 train_loss=... val_acc=... elapsed=...s
+```
+
+Checkpoint saved under `experiments/checkpoints/acl18/`. If GPU is present,
+the trainer logs e.g. `device=cuda` since the config uses `device: auto`.
+Verify GPU is actually being used:
+
+```bash
+python -c "import torch; print('CUDA available:', torch.cuda.is_available()); \
+print('Device:', torch.cuda.get_device_name(0) if torch.cuda.is_available() else 'cpu')"
+```
+
+Expected on the school PC: `CUDA available: True / Device: NVIDIA RTX A6000`.
 
 ## 7) Phase 3b — full DNE scoring (Phase 10 prerequisite)
 
