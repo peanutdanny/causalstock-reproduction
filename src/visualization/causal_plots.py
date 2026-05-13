@@ -37,7 +37,11 @@ def _load_tcd(checkpoint_path: str | Path) -> tuple[np.ndarray, np.ndarray, np.n
     model.eval()
     with torch.no_grad():
         out = model.tcd()
-    return out.sigma.cpu().numpy(), out.G_hat.cpu().numpy(), out.G_sample.cpu().numpy()
+    return (
+        out.sigma.detach().cpu().numpy(),
+        out.G_hat.detach().cpu().numpy(),
+        out.G_sample.detach().cpu().numpy(),
+    )
 
 
 def plot_sigma_heatmap(

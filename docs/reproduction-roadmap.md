@@ -67,7 +67,7 @@
 | Phase 9  Ablation harness | ✅ | 100% | — |
 | Phase 9.5 normalization fix | ✅ | 100% | — |
 | Phase Transfer (git push) | ✅ | 100% | — |
-| **Phase 10 ACL18 reproduction** | ⏸ | 0% | 학교PC C2 |
+| **Phase 10 ACL18 reproduction** | 🟡 | 1-seed ✅ / 10-seed ⏸ | 10-seed run, no_lag_dep 디버깅 |
 | **Phase 11 5-dataset 일반화** | ⏸ | 0% (어댑터 미작성) | 노트북 A1 |
 | **보조: Tables 4/5, Figure 4** | ⏸ | 0% | 노트북 A2 |
 | **최종 reproduction report** | ⏸ | 0% | M5 |
@@ -76,7 +76,9 @@
 - (a) **Phase 11 어댑터 코드 미작성** — 노트북에서 즉시 시작 가능
 - (b) ~~Phase 3b 점수화 미완료~~ ✅ **2026-05-14 완료** (2h 9min, 85 stocks, 44,625 entries)
 - (c) **device='auto' on CUDA 검증 안 됨** — 학교PC 첫 셋업 시 확인
-- (d) **Phase 10 학습 미실시** — C1 완료됐으므로 즉시 가능 (노트북 CPU 또는 학교PC GPU)
+- (d) ~~Phase 10 학습 미실시~~ ✅ **1 seed 완료** (full 62.30%, paper 63.42 -1.12%p)
+- (e) **no_lag_dep 학습 버그** — epoch 10에 early stop, 51%로 떨어짐 (paper 59.19) → 디버깅 필요
+- (f) **paper-quality 10 seeds** — 학교PC GPU에서 진행 권장
 
 ---
 
@@ -370,6 +372,8 @@ git pull
 | R-6 | NI225/FTSE100 데이터 (snu data) | 다운로드 가능성 | https://datalab.snu.ac.kr/dtml 페이지 확인 필요 |
 | R-7 | CMIN-CN Chinese prompt 작동 | 점수 품질 미확인 | C3 진입 시 50건 테스트 후 본격 |
 | R-8 | API 키 노출 (대화 기록) | 보안 | 회전 권고. 현재 사용자가 그대로 진행 결정 |
+| R-9 | **no_lag_dep ablation 학습 정체** | paper 59.19 vs ours 51.43 (-7.76%p) | `lag_dep=False`일 때 epoch 10에 early stop. TCD MLP off 분기 점검 필요. 추측: h_u/h_v 없을 때 σ가 너무 빨리 saturate, gradient flow 막힘 |
+| R-10 | no_news/lambda_0이 paper보다 높음 | paper 58 → ours 62 | 우리 model 강력함 또는 gpt-5.4-mini 일관성 영향. 10-seed 후 재평가 |
 
 ---
 
@@ -396,6 +400,9 @@ git pull
 | 2026-05-13 | A4 ✅ GPT cache → train.py wiring 검증 완료. cache hit 4.7% (tiny config), wiring 정상. 대규모 cache 검증은 C1 완료 후. | Claude |
 | 2026-05-13 20:24 | Phase 3b 야간 점수화 시작 (laptop, PID 43101). gpt-5.4-mini, concurrency=30, batch=200. 시작 cache 200 entries → 목표 ~44,000. 예상 wall-clock ~10h, 비용 ~$20. Log: `experiments/logs/scoring/scoring_20260513_202442.log`. | Claude |
 | 2026-05-14 ~02:34 | ✅ Phase 3b 점수화 완료! 2h 9min wall-clock (예상 1/5), 67,531 API calls, 44,625 entries (85 stocks 전체), 범위 위반 0. M1 prerequisite 해소. | Claude |
+| 2026-05-14 08:30 | ✅ 시각화 모듈 5종 + make_plots.py 작성. matplotlib + seaborn 의존성 추가. paper Figure 3, 4 + Table 2 대응. | Claude |
+| 2026-05-14 08:34 | 🟡 Phase 10 1-seed × 5 configs 학습 완료. **full ACL18 test ACC 62.30%** (paper 63.42, -1.12%p). 발견 R-9: no_lag_dep epoch 10 정체 (51.43 vs paper 59.19). R-10: no_news/lambda_0 paper보다 높음. M1 후보 결과지만 10 seeds 필요. | Claude |
+| 2026-05-14 08:37 | 📊 결과 plots 7개 자동 생성: training_curves, ablation_comparison, score_distribution, score_correlation, sigma_heatmap, causal_strength, reproduction_table. `experiments/figures/` | Claude |
 
 ---
 
