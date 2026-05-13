@@ -395,6 +395,7 @@ git pull
 |---|---|---|
 | 2026-05-13 | 초기 작성. Phase 0-9 ✅, Phase 9.5 ✅, Phase 3b 200건 ✅, GitHub push ✅. M0 달성. | Claude + djhwang |
 | 2026-05-13 | A4 ✅ GPT cache → train.py wiring 검증 완료. cache hit 4.7% (tiny config), wiring 정상. 대규모 cache 검증은 C1 완료 후. | Claude |
+| 2026-05-13 20:24 | Phase 3b 야간 점수화 시작 (laptop, PID 43101). gpt-5.4-mini, concurrency=30, batch=200. 시작 cache 200 entries → 목표 ~44,000. 예상 wall-clock ~10h, 비용 ~$20. Log: `experiments/logs/scoring/scoring_20260513_202442.log`. | Claude |
 
 ---
 
