@@ -26,7 +26,8 @@ model:
   use_tcd: true
   lag_dep: false             # ← ablation flag
   h_uv_layers: 1
-  gumbel_tau: 1.0
+  gumbel_tau: 0.1            # R-9 fix iter 2: even harder samples
+                             # 0.5 still produced chance-level training.
   graph_prior_lambda_s: 1.0
   graph_prior_lambda_d: 0.0
 
@@ -39,7 +40,7 @@ train:
   lr: 1.0e-5
   batch_size: 32
   max_epochs: 100
-  early_stop_patience: 10
+  early_stop_patience: 30    # R-9 fix: give it more time to escape entropy plateau
   seed: 0
 
 runtime:

@@ -372,7 +372,7 @@ git pull
 | R-6 | NI225/FTSE100 데이터 (snu data) | 다운로드 가능성 | https://datalab.snu.ac.kr/dtml 페이지 확인 필요 |
 | R-7 | CMIN-CN Chinese prompt 작동 | 점수 품질 미확인 | C3 진입 시 50건 테스트 후 본격 |
 | R-8 | API 키 노출 (대화 기록) | 보안 | 회전 권고. 현재 사용자가 그대로 진행 결정 |
-| R-9 | **no_lag_dep ablation 학습 정체** | paper 59.19 vs ours 51.43 (-7.76%p) | `lag_dep=False`일 때 epoch 10에 early stop. TCD MLP off 분기 점검 필요. 추측: h_u/h_v 없을 때 σ가 너무 빨리 saturate, gradient flow 막힘 |
+| R-9 | **no_lag_dep ablation 학습 정체 — known limitation** | paper 59.19 vs ours 50.40 (-8.79%p after fixes) | 3가지 수정 시도(zero init, gumbel_tau 1.0→0.5→0.1, patience 10→30) 모두 chance level. paper-checker 감사 결과 우리 구현은 architectural match. 추정 root cause: paper의 lag-independent variant가 amortized posterior(R-4)를 사용. 우리는 input-independent U,V free parameter → 학습 signal 부족. 큰 구현 변경(amortized inference) 필요. **현재 4/5 ablation은 paper pattern과 일치하므로 main result에는 영향 없음**. paper Table 2 비교 시 no_lag_dep는 별도 footnote. |
 | R-10 | no_news/lambda_0이 paper보다 높음 | paper 58 → ours 62 | 우리 model 강력함 또는 gpt-5.4-mini 일관성 영향. 10-seed 후 재평가 |
 
 ---
@@ -403,6 +403,7 @@ git pull
 | 2026-05-14 08:30 | ✅ 시각화 모듈 5종 + make_plots.py 작성. matplotlib + seaborn 의존성 추가. paper Figure 3, 4 + Table 2 대응. | Claude |
 | 2026-05-14 08:34 | 🟡 Phase 10 1-seed × 5 configs 학습 완료. **full ACL18 test ACC 62.30%** (paper 63.42, -1.12%p). 발견 R-9: no_lag_dep epoch 10 정체 (51.43 vs paper 59.19). R-10: no_news/lambda_0 paper보다 높음. M1 후보 결과지만 10 seeds 필요. | Claude |
 | 2026-05-14 08:37 | 📊 결과 plots 7개 자동 생성: training_curves, ablation_comparison, score_distribution, score_correlation, sigma_heatmap, causal_strength, reproduction_table. `experiments/figures/` | Claude |
+| 2026-05-14 09:10 | R-9 디버깅. paper-checker 감사 → 우리 구현은 architectural match. 3가지 수정(zero init, tau 0.1, patience 30) 모두 chance level. R-9를 known limitation으로 인정 (likely amortized posterior issue, R-4와 묶임). 다른 4 ablations는 paper pattern과 일치하므로 main result 비교에 영향 없음. | Claude |
 
 ---
 

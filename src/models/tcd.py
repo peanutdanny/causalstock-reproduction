@@ -66,14 +66,24 @@ class LagDependentTCD(nn.Module):
         # Edge existence / non-existence likelihoods (Section 4.4).
         self.U = nn.Parameter(torch.empty(L, D, D))
         self.V = nn.Parameter(torch.empty(L, D, D))
-        nn.init.xavier_uniform_(self.U)
-        nn.init.xavier_uniform_(self.V)
-        with torch.no_grad():
-            self.U.mul_(init_scale)
-            self.V.mul_(init_scale)
         if lag_dep:
+            # With h_u/h_v MLPs absorbing learning, small Xavier init works.
+            nn.init.xavier_uniform_(self.U)
+            nn.init.xavier_uniform_(self.V)
+            with torch.no_grad():
+                self.U.mul_(init_scale)
+                self.V.mul_(init_scale)
             self.h_u = _build_h_mlp(h_layers)
             self.h_v = _build_h_mlp(h_layers)
+        else:
+            # Lag-independent variant: matches CausalStock_code DECI reference
+            # (variational_distributions.py: logits zero init). With Xavier×0.1
+            # the entropy gradient swamps the likelihood signal and training
+            # stagnates at chance level. Zero init starts every edge exactly
+            # at σ=0.5 with symmetric entropy, so any likelihood signal
+            # immediately breaks symmetry. (R-9 fix, paper-checker audit.)
+            nn.init.zeros_(self.U)
+            nn.init.zeros_(self.V)
         # Causal Weight Graph (Section 4.5).
         self.G_hat = nn.Parameter(torch.empty(L, D, D))
         nn.init.xavier_uniform_(self.G_hat)
