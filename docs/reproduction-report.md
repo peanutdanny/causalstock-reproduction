@@ -198,19 +198,74 @@ R-9는 본 재현에서 가장 큰 미해결 항목입니다. 합리적인 디�
 
 ## 6. 결과 시각화 자료
 
-생성된 figure는 `experiments/figures/` 에 저장:
+모든 figure는 `experiments/figures/` 에 저장. 각 그림의 **왜 보는가 / 무엇을 보는가 / 결론** 을 함께 정리.
 
-| 파일 | 내용 |
-|---|---|
-| `training_curves.png` | 5개 변형의 train_loss / val_acc / val_mcc 곡선 |
-| `score_distribution.png` | DNE 5차원 점수 분포 히스토그램 |
-| `score_correlation.png` | DNE 5차원 점수 간 상관 매트릭스 |
-| `sigma_heatmap.png` | 학습된 인과 그래프 σ_{l,j,i} (lag별, 85×85) |
-| `causal_strength.png` | Σ_l G⊙Ĝ 종합 인과 강도 (85×85) |
-| `ablation_comparison.png` | 5개 변형 ACC/MCC를 논문 수치와 막대그래프 비교 |
-| `reproduction_table.png` | 우리 vs 논문 정확도 표 (이미지) |
-| `apv_curve.png` | **Figure 4 (a) — 누적 포트폴리오 가치 곡선** |
-| `sharpe_bar.png` | **Figure 4 (b) — Sharpe ratio 막대그래프** |
+### 6.1 학습 곡선 — `training_curves.png`
+- **왜 보는가**: 모델이 실제로 학습되고 있는지, 어디서 멈췄는지, 5개 변형 사이에 학습 양상의 차이가 있는지 한눈에 확인.
+- **무엇을 보는가**: 3개 subplot.
+  - 좌: `train_loss` (ELBO + λ·BCE 총합)을 epoch별로 표시.
+  - 중: `val_acc` (validation accuracy).
+  - 우: `val_mcc` (Matthews correlation coefficient).
+- **범례 (선 색)**:
+  - 파랑 = `full` (전체 모델)
+  - 빨강 = `no_tcd` (TCD 제거)
+  - 주황 = `no_news` (뉴스 제거, 가격만)
+  - 초록 = `no_lag_dep` (lag 의존성 제거)
+  - 보라 = `lambda_0` (BCE auxiliary loss 제거)
+- **결론**: full / no_news / lambda_0 은 100 epoch까지 안정적으로 학습 (val_acc 62% 부근 수렴). `no_tcd` 는 epoch 14에서 early stop, chance-level (54%) 부근. `no_lag_dep` 는 epoch 11에서 early stop, 50% (R-9 known limitation).
+
+### 6.2 DNE 점수 분포 — `score_distribution.png`
+- **왜 보는가**: GPT가 매긴 5차원 점수가 한쪽으로 치우치지 않고 의미 있는 변동을 보이는지 sanity check. 모든 점수가 0이거나 한 값에 몰려 있으면 prompt가 깨진 것.
+- **무엇을 보는가**: 5개 패널 (Correlation / Sentiment / Importance / Impact / Duration), 각각 점수값 (정수, 보통 0–5 또는 -3~+3) 의 히스토그램.
+- **결론**: 5차원 모두 0이 아닌 분포 + 종 모양에 가까움 → GPT scoring이 정상 작동. 특히 Sentiment 는 좌우 대칭에 가까워 한쪽 편향 없음.
+
+### 6.3 DNE 점수 간 상관 — `score_correlation.png`
+- **왜 보는가**: 5차원이 서로 너무 강하게 상관되면 사실상 차원 축소가 안 된 것 (=정보 중복). 적당한 양의 양 (positive) 상관 + 약간의 음 (negative) 상관 이 이상적.
+- **무엇을 보는가**: 5×5 상관 매트릭스 heatmap (Pearson ρ, RdBu 색조).
+- **범례 (색)**: 진한 빨강 = 강한 양의 상관 (+1), 흰색 = 무상관 (0), 진한 파랑 = 강한 음의 상관 (-1).
+- **결론**: Importance ↔ Impact 는 양의 상관 (큰 사건이 가격 영향도 크다 — 직관 일치). Correlation ↔ 나머지 는 약한 상관 (뉴스가 종목과 관련 있다고 해서 sentiment 가 결정되진 않음 — 정상).
+
+### 6.4 인과 그래프 — `sigma_heatmap.png`
+- **왜 보는가**: 모델이 학습한 인과 그래프 G의 *posterior 확률* σ_{l,j,i} = P(edge j→i at lag l) 를 직접 들여다본다. 무작위로 학습됐다면 모든 셀이 0.5 근처. 의미 있게 학습됐다면 0/1 부근으로 분극.
+- **무엇을 보는가**: 5개 패널 (lag l=1..5), 각각 85×85 heatmap. 행 j = source 종목, 열 i = target 종목. 대각선은 종목의 자기 자신 (제거하지 않음).
+- **범례 (색)**: `viridis` colormap — 노랑 = σ≈1 (edge 강하게 존재), 보라 = σ≈0 (edge 거의 없음).
+- **결론**: lag=1 에서 가장 sparse (단기 인과는 명확하게 선별), lag=5 로 갈수록 σ가 0.5 부근으로 흐려짐 (먼 과거의 영향은 불확실). Paper Figure 3a 와 정성적으로 일치.
+
+### 6.5 종합 인과 강도 — `causal_strength.png`
+- **왜 보는가**: σ는 "있냐/없냐"의 확률이고, Ĝ는 "있을 때 얼마나 강한 영향이냐"의 실수 가중치. 둘을 곱한 G⊙Ĝ를 5개 lag에 걸쳐 합산하면 **종목 간 종합 인과 강도** 가 나온다. 이 그래프가 Paper Figure 3b 와 Table 5 (시가총액 상관) 의 기반.
+- **무엇을 보는가**: 85×85 heatmap (RdBu_r 색조).
+- **범례 (색)**: 빨강 = 양의 강한 인과 (j 오르면 i 오른다), 파랑 = 음의 인과 (j 오르면 i 내린다), 흰색 = 영향 없음.
+- **결론**: 행 별로 합산값이 큰 종목 = 시장 영향력 큰 종목 (Table 5에서 시가총액과 Spearman 상관 검증 예정). 현재 1-seed 결과라서 노이즈가 많지만, 향후 10-seed 평균 시 더 선명해질 것.
+
+### 6.6 Ablation 막대그래프 — `ablation_comparison.png`
+- **왜 보는가**: 5개 변형의 우리 결과 vs 논문 결과를 정확도 (ACC) 와 MCC 두 metric으로 동시에 시각 비교. 표보다 직관적.
+- **무엇을 보는가**: 2개 subplot (좌: ACC, 우: MCC). 각 변형마다 두 막대 (우리 / 논문) 가 나란히.
+- **범례**: 연한 색 = 우리 재현 (1-seed), 진한 색 = 논문 (10-seed 평균).
+- **결론**: full / no_tcd 는 우리와 논문이 거의 동일 높이 (✅ 일치). no_lag_dep 는 우리가 50% 부근, 논문 59% (❌ R-9 갭). no_news / lambda_0 은 우리가 더 높음 (R-10).
+
+### 6.7 재현 결과 표 (이미지) — `reproduction_table.png`
+- **왜 보는가**: 슬라이드/리포트 첨부용 — 우리 vs 논문 핵심 수치를 한 장에.
+- **무엇을 보는가**: 4행 표 — 데이터셋(ACL18), 우리 ACC/MCC, 논문 ACC/MCC, 차이.
+- **결론**: 한 장으로 "ACC -1.12%p, MCC +0.029" 한 줄 요약.
+
+### 6.8 누적 포트폴리오 가치 (APV) — `apv_curve.png` (논문 Figure 4 (a))
+- **왜 보는가**: 분류 정확도와는 별개로, 실제 trading 시뮬레이션에서 수익이 나는지 시각적으로 확인. 매일 top-3 종목을 동가중 매수했을 때 64거래일 (test 기간) 동안 1.0 → 얼마까지 가는가.
+- **무엇을 보는가**: x축 = trading day (0..63), y축 = 누적 가치 (시작 1.0). 5개 변형 + paper baseline.
+- **범례 (선)**:
+  - 색 = 6.1과 동일 (파/빨/주/초/보)
+  - 검정 점선 (`break-even`) = 1.0 (손익분기점)
+  - 회색 dashed (`paper final APV = 1.32`) = 논문 보고 ACL18 최종값
+  - 범례 라벨에 각 변형의 `final=X.XXX` 가 함께 표시됨
+- **결론**: 5개 변형 모두 break-even 1.0 위에서 마감 (양의 수익). 다만 paper 1.32에는 못 미침 (full 1.05). no_tcd 가 1.12로 가장 높은 건 통계적 우연 (1-seed × 64일 = 표본 작음, 분류 정확도 chance-level이라 무작위 선택이 우연히 잘 맞음).
+
+### 6.9 Sharpe Ratio 비교 — `sharpe_bar.png` (논문 Figure 4 (b))
+- **왜 보는가**: 단순 수익률은 변동성을 무시한다. Sharpe = 평균수익 / 수익률 std. 위험 조정 후 수익을 본다. 논문이 강조하는 지표.
+- **무엇을 보는가**: 5개 변형의 daily Sharpe ratio 막대 + paper baseline 점선.
+- **범례**:
+  - 색 = 6.1과 동일
+  - 회색 dashed (`paper SR = 0.369`) = 논문 보고 ACL18 값
+  - 각 막대 위에 우리 SR 수치 annotation
+- **결론**: full SR=0.066, paper 0.369 와 -0.30 차이. 다만 1-seed × 64일 표본에서 SR 표준오차는 1/√64 ≈ 0.125 이므로 통계적으로 paper 와 다르다고 단정할 수 없음. 10-seed 평균 후 재평가 필요.
 
 ---
 
