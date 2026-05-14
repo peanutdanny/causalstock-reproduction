@@ -23,7 +23,13 @@ from src.visualization import (
     plot_causal_strength,
     plot_reproduction_table,
     plot_ablation_bar,
+    plot_apv_curve,
+    plot_sharpe_bar,
 )
+
+
+# Paper Figure 4: ACL18 trading-sim baseline (top-3 equal-weight).
+PAPER_FIGURE4 = {"ACL18": {"apv": 1.32, "sharpe": 0.369}}
 
 
 PAPER_TARGETS = {
@@ -112,6 +118,23 @@ def main():
             ours = {"ACL18_ACC": acc, "ACL18_MCC": mcc}
             paper = {k: v for k, v in PAPER_TARGETS.items() if k in ours}
             plot_reproduction_table(paper, ours, out / "reproduction_table.png")
+
+    # Figure 4: APV + Sharpe (consumes backtest NPZ produced by run_backtest.py).
+    backtests = sorted(results_dir.glob("backtest_acl18*.npz"))
+    if backtests:
+        print(f"→ trading sim (Figure 4) from {len(backtests)} backtest(s)")
+        runs = {}
+        for bp in backtests:
+            label = bp.stem.replace("backtest_acl18_", "").replace("backtest_acl18", "full") or "full"
+            if label == "lambda0":  # checkpoint dir is unprefixed; align to PALETTE.
+                label = "lambda_0"
+            data = __import__("numpy").load(bp, allow_pickle=False)
+            runs[label] = {"probs": data["probs"], "returns": data["returns"]}
+        paper = PAPER_FIGURE4["ACL18"]
+        plot_apv_curve(runs, out / "apv_curve.png", k=3,
+                       paper_final_apv=paper["apv"])
+        plot_sharpe_bar(runs, out / "sharpe_bar.png", k=3,
+                        paper_sharpe=paper["sharpe"])
 
     ckpt = ROOT / args.checkpoint
     if ckpt.exists():

@@ -176,7 +176,10 @@
 - **위치**: 노트북
 - **차단**: 없음
 - **세부**:
-  - [ ] A2-a. `scripts/run_investment_sim.py` — Figure 4 (top-3 portfolio SR/APV)
+  - [x] A2-a. `scripts/run_backtest.py` + Figure 4 — top-3 APV/Sharpe vs paper baseline (2026-05-14)
+        - 1-seed ACL18: APV=1.05, SR=0.066 (paper 1.32 / 0.369). Variants backtested.
+        - Uses StockNet `movement` as realized return (z-scored `close` would mis-scale).
+        - Tests: `tests/test_backtest.py` (4 tests, all 61 suite pass).
   - [ ] A2-b. `scripts/run_spearman_corr.py` — Table 5 (causal strength vs market cap)
   - [ ] A2-c. `scripts/run_hyperparam_sweep.py` — Table 4 (lr/L/λ sensitivity)
   - [ ] A2-d. `scripts/aggregate_results.py` — paper Table 1/2 자동 비교 리포트

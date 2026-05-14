@@ -24,11 +24,14 @@ def plot_apv_curve(
     *,
     k: int = 3,
     title: str = "Accumulated Portfolio Value (top-3 strategy)",
+    paper_final_apv: float | None = None,
 ) -> Path:
     """Per-model APV over time.
 
     Args:
         runs: {label: {"probs": (T,D), "returns": (T,D)}}
+        paper_final_apv: if given, draw a dashed horizontal at the paper's
+            reported final APV for visual comparison (e.g. ACL18 = 1.32).
     """
     apply_style()
     fig, ax = plt.subplots(figsize=(8, 4.5), constrained_layout=True)
@@ -36,8 +39,13 @@ def plot_apv_curve(
         r_daily = top_k_portfolio_returns(d["probs"], d["returns"], k=k)
         apv = accumulated_portfolio_value(r_daily)
         color = PALETTE.get(label, None)
-        ax.plot(apv, label=label, color=color, linewidth=1.6)
-    ax.axhline(1.0, color="black", linestyle=":", linewidth=0.8)
+        ax.plot(apv, label=f"{label}  (final={apv[-1]:.3f})",
+                color=color, linewidth=1.6)
+    ax.axhline(1.0, color="black", linestyle=":", linewidth=0.8, label="break-even")
+    if paper_final_apv is not None:
+        ax.axhline(paper_final_apv, color=PALETTE.get("paper", "#7f7f7f"),
+                   linestyle="--", linewidth=1.0,
+                   label=f"paper final APV = {paper_final_apv:.2f}")
     ax.set_xlabel("Trading day (test period)")
     ax.set_ylabel("APV   (= ∏(1 + r_t))")
     ax.set_title(title)
@@ -56,8 +64,14 @@ def plot_sharpe_bar(
     k: int = 3,
     risk_free: float = 0.0,
     title: str = "Sharpe ratio comparison",
+    paper_sharpe: float | None = None,
 ) -> Path:
-    """Bar chart of daily Sharpe ratio per model."""
+    """Bar chart of daily Sharpe ratio per model.
+
+    Args:
+        paper_sharpe: optional dashed reference line for the paper's reported
+            value (e.g. ACL18 = 0.369).
+    """
     apply_style()
     labels = list(runs.keys())
     srs = []
@@ -71,6 +85,11 @@ def plot_sharpe_bar(
     for bar, sr in zip(bars, srs):
         ax.annotate(f"{sr:.3f}", (bar.get_x() + bar.get_width() / 2, bar.get_height()),
                     ha="center", va="bottom", fontsize=9)
+    if paper_sharpe is not None:
+        ax.axhline(paper_sharpe, color=PALETTE.get("paper", "#7f7f7f"),
+                   linestyle="--", linewidth=1.0,
+                   label=f"paper SR = {paper_sharpe:.3f}")
+        ax.legend(loc="best", frameon=False)
     ax.set_ylabel("Sharpe ratio (daily, R_f=0)")
     ax.set_title(title)
     ax.set_axisbelow(True)
