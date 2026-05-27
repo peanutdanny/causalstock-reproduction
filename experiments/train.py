@@ -12,6 +12,12 @@ import json
 import sys
 from pathlib import Path
 
+# Windows: pandas/sklearn must load before torch — torch's DLL load
+# leaves too little C stack for the nested importlib resolution in
+# pandas/sklearn, causing a deterministic access-violation segfault.
+import sklearn  # noqa: F401
+import pandas  # noqa: F401
+
 import torch
 from torch.utils.data import DataLoader
 

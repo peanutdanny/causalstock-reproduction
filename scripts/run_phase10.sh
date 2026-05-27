@@ -14,6 +14,16 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
+# Detect venv layout (Windows: .venv/Scripts/python.exe ; Unix: .venv/bin/python)
+if [[ -x .venv/Scripts/python.exe ]]; then
+    PY=.venv/Scripts/python.exe
+elif [[ -x .venv/bin/python ]]; then
+    PY=.venv/bin/python
+else
+    echo "ERROR: no python in .venv/{Scripts,bin}/" >&2
+    exit 1
+fi
+
 N_SEEDS=${1:-1}
 LOG_DIR=experiments/logs/phase10
 mkdir -p "$LOG_DIR"
@@ -36,7 +46,7 @@ for cfg in "${CONFIGS[@]}"; do
     for seed in $(seq 0 $((N_SEEDS - 1))); do
         log="$LOG_DIR/${name}_seed${seed}_${TS}.log"
         echo ">>> $name seed=$seed  log=$log"
-        if .venv/bin/python -m experiments.train \
+        if "$PY" -m experiments.train \
                 --config "$cfg" --seed "$seed" > "$log" 2>&1; then
             tail -2 "$log"
         else

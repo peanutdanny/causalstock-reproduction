@@ -20,6 +20,6 @@ class Config(dict):
 
 def load_yaml_config(path: str | Path) -> Config:
     path = Path(path)
-    with path.open("r") as f:
+    with path.open("r", encoding="utf-8") as f:
         raw = yaml.safe_load(f) or {}
     return Config(raw)
