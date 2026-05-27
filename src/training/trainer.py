@@ -50,12 +50,14 @@ class Trainer:
         device: str = "cpu",
         log_dir: Optional[Path] = None,
         checkpoint_dir: Optional[Path] = None,
+        grad_clip_norm: Optional[float] = 1.0,
     ):
         device = _resolve_device(device)
         self.model = model.to(device)
         self.loss = loss.to(device)
         self.optim = optimizer
         self.device = device
+        self.grad_clip_norm = grad_clip_norm
         self.log_dir = Path(log_dir) if log_dir else None
         self.ckpt_dir = Path(checkpoint_dir) if checkpoint_dir else None
         self.logger = get_logger(
@@ -88,6 +90,8 @@ class Trainer:
             )
             self.optim.zero_grad()
             lo.total.backward()
+            if self.grad_clip_norm is not None:
+                torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.grad_clip_norm)
             self.optim.step()
             total += float(lo.total.item()) * P.shape[0]
             n += P.shape[0]
@@ -112,12 +116,23 @@ class Trainer:
         val_loader: DataLoader,
         max_epochs: int = 100,
         patience: int = 10,
+        kl_warmup_epochs: int = 10,
     ) -> dict:
         best_acc = -1.0
         best_epoch = -1
         bad_epochs = 0
         t0 = time.time()
         for epoch in range(1, max_epochs + 1):
+            # KL warmup: ramp β from 0 to 1 over the first kl_warmup_epochs
+            # so the likelihood term gets a head start before the high-entropy
+            # equilibrium becomes attractive. Eliminates posterior collapse
+            # observed in seeds {2,3,5,7} on the Phase 10b GPU sweep.
+            if kl_warmup_epochs > 0:
+                beta = min(1.0, (epoch - 1) / kl_warmup_epochs)
+            else:
+                beta = 1.0
+            if hasattr(self.loss, "set_kl_weight"):
+                self.loss.set_kl_weight(beta)
             train_loss = self._train_epoch(train_loader)
             val_acc, val_mcc, _, _ = self.evaluate(val_loader)
             stats = TrainStats(

@@ -29,6 +29,20 @@ LOG_DIR=experiments/logs/phase10
 mkdir -p "$LOG_DIR"
 TS=$(date +%Y%m%d_%H%M%S)
 
+# Single-instance guard: refuse to start if another sweep is already running.
+LOCK="$LOG_DIR/dispatch.lock"
+if [[ -f "$LOCK" ]]; then
+    prev_pid=$(cat "$LOCK" 2>/dev/null || echo "")
+    if [[ -n "$prev_pid" ]] && kill -0 "$prev_pid" 2>/dev/null; then
+        echo "ERROR: another Phase 10 sweep is already running (PID $prev_pid)." >&2
+        echo "       Remove $LOCK manually if you are sure no sweep is running." >&2
+        exit 2
+    fi
+    echo "Stale lock found ($prev_pid no longer running) — overwriting."
+fi
+echo $$ > "$LOCK"
+trap 'rm -f "$LOCK"' EXIT
+
 CONFIGS=(
     "experiments/configs/acl18.yaml"
     "experiments/configs/ablations/no_tcd.yaml"

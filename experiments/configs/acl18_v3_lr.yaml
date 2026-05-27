@@ -1,0 +1,56 @@
+# v3: lr 1e-5 → 1e-4 + bce=1.0 + KL warmup.
+# v2 (bce=1.0 + KL warmup at lr=1e-5) still left seeds {2,3,5,7} at chance.
+# Hypothesis: lr=1e-5 is so small that even with KL warmup gradient signal,
+# the weights can't escape the f_i≈0.5 dead-output basin within 100 epochs.
+# Paper-deviation: lr is one of the hyperparameters paper Table 4a tuned;
+# they report lr=1e-5 as best for ACL18. Our test will reveal if our
+# implementation is more lr-sensitive than the paper authors' code.
+
+experiment_name: causalstock_acl18_v3
+
+data:
+  dataset: acl18
+  price_root: reference_data/stocknet-dataset-master/price/preprocessed
+  tweet_root: reference_data/stocknet-dataset-master/tweet/preprocessed
+  train_start: "2014-01-02"
+  train_end:   "2015-08-02"
+  valid_start: "2015-08-03"
+  valid_end:   "2015-09-30"
+  test_start:  "2015-10-01"
+  test_end:    "2016-01-01"
+  lag_L: 5
+  news_per_day: 10
+  score_news_per_day: 20
+  dne_cache_path: data/processed/dne_acl18.parquet
+  price_dim: 7
+  use_news: true
+  movement_threshold: 0.0
+
+model:
+  d_p: 4
+  d_m: 64
+  hidden_size: 332
+  use_tcd: true
+  lag_dep: true
+  h_uv_layers: 1
+  gumbel_tau: 1.0
+  graph_prior_lambda_s: 1.0
+  graph_prior_lambda_d: 0.0
+
+loss:
+  bce_weight: 1.0      # v2 carryover
+  noise_init: 0.0
+
+train:
+  optimizer: adam
+  lr: 1.0e-4           # ← bumped 10x from paper-default 1e-5
+  batch_size: 32
+  max_epochs: 100
+  early_stop_patience: 10
+  seed: 0
+
+runtime:
+  device: auto
+  num_workers: 0
+  checkpoint_dir: experiments/checkpoints/acl18_v3
+  log_dir: experiments/logs/acl18_v3

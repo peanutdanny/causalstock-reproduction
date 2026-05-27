@@ -55,10 +55,20 @@ class CausalStockLoss(nn.Module):
         self.lambda_s = lambda_s
         self.lambda_d = lambda_d
         self.likelihood_form = likelihood_form
+        # KL warmup: scales the (prior + entropy) terms. Trainer can mutate this
+        # per epoch via set_kl_weight(). Default 1.0 = paper-faithful full ELBO.
+        # Setting to <1 prevents the posterior collapse where σ_q stays at 0.5
+        # and the entropy bonus dominates the likelihood signal (observed in
+        # 4/10 seeds during Phase 10b GPU sweep, 2026-05-27).
+        self.kl_weight: float = 1.0
         if G_prior is not None:
             self.register_buffer("G_prior", G_prior)
         else:
             self.G_prior = None
+
+    def set_kl_weight(self, beta: float) -> None:
+        """Set the (prior + entropy) scale factor used in the next forward()."""
+        self.kl_weight = float(beta)
 
     # ---- ELBO components -----------------------------------------------------
 
@@ -119,7 +129,9 @@ class CausalStockLoss(nn.Module):
         ll = self._log_likelihood(f_i, y, sigma_noise)
         prior = self._log_graph_prior(G_sample) / max(f_i.shape[0], 1)  # per-batch scale
         entropy = self._entropy(sigma_q) / max(f_i.shape[0], 1)
-        elbo = ll + prior + entropy
+        # KL warmup scales the prior+entropy terms. ll always gets full weight
+        # so the model has a clear gradient toward fitting the data first.
+        elbo = ll + self.kl_weight * (prior + entropy)
         bce = self._bce(f_i, y)
         # Eq. 14 — 1/D normalization.
         total = (-elbo + self.bce_weight * bce * D) / D
